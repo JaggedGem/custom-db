@@ -2,6 +2,18 @@ const fs = require('fs');
 
 const DB_FILE = 'test.cdb';
 
+const createDBFile = (): void => {
+    try {
+        fs.writeFileSync('data/' + DB_FILE, '');
+    } catch (err: unknown) {
+        if (err instanceof Error) {
+            throw new Error(`Error creating ${DB_FILE}: ${err.message}.`);
+        } else {
+            throw new Error('An error occured');
+        }
+    }
+}
+
 const readDBFile = (): string => {
     try {
         const data = fs.readFileSync('data/' + DB_FILE, 'utf-8');
@@ -28,6 +40,4 @@ const writeDBFile = (content: string) => {
     }
 }
 
-console.log('File data: \n' + readDBFile());
-writeDBFile('test123');
-console.log('\nFile data: \n' + readDBFile());
+createDBFile();
