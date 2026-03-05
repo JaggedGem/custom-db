@@ -1,0 +1,34 @@
+const PAGE_SIZE = 4096;
+
+const NEXT_PAGE_ID_POSITION = 0;
+const NEXT_SLOT_OFFSET_POSITION = 4;
+const RECORD_COUNT_POSITION = 6;
+const PAGE_TYPE_POSITION = 15;
+
+const PAGE_TYPES = {
+    MASTER_NULL_MAP: 1,
+    CATALOG_TABLE: 2,
+    CATALOG_COLUMN: 3,
+    DATA_SLOTTED: 4,
+    DATA_FIXED: 5,
+    DATA_BITMAP: 6,
+} as const;
+
+const DATA_TYPES = {
+    BOOLEAN: 1,
+    INTEGER: 2,
+    STRING: 3,
+    FOREIGN_KEY: 4,
+};
+
+export type PageType = (typeof PAGE_TYPES)[keyof typeof PAGE_TYPES];
+
+export {
+    PAGE_SIZE,
+    NEXT_PAGE_ID_POSITION,
+    NEXT_SLOT_OFFSET_POSITION,
+    RECORD_COUNT_POSITION,
+    PAGE_TYPE_POSITION,
+    PAGE_TYPES,
+    DATA_TYPES,
+};

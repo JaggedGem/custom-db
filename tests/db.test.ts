@@ -10,7 +10,7 @@ import {
     createBitmapPage,
     createFixedPage,
     createSlottedPage,
-    initChainPage,
+    writeHeader,
     createColumn,
     createTable,
     PAGE_SIZE,
@@ -153,16 +153,16 @@ describe('createSlottedPage', () => {
     });
 });
 
-describe('initChainPage', () => {
-    it('initializes chain page correctly', () => {
+describe('writeHeader', () => {
+    it('initializes page header correctly and returns buffer', () => {
         const fd = initDatabase(TEST_DB, true);
         const pid = allocatePage(
             fd,
             PAGE_TYPES.CATALOG_TABLE,
-            'initChainPage.test',
+            'writeHeader.test',
         );
 
-        const page = initChainPage(fd, pid, PAGE_TYPES.CATALOG_TABLE);
+        const page = writeHeader(fd, pid, PAGE_TYPES.CATALOG_TABLE, 'writeHeader.test');
         expect(page.readUInt32LE(0)).toBe(0);
         expect(page.readUInt8(15)).toBe(PAGE_TYPES.CATALOG_TABLE);
 
@@ -179,7 +179,7 @@ describe('createColumn', () => {
             PAGE_TYPES.CATALOG_COLUMN,
             'createColumn.test',
         );
-        initChainPage(fd, colPage, PAGE_TYPES.CATALOG_COLUMN);
+        writeHeader(fd, colPage, PAGE_TYPES.CATALOG_COLUMN, 'createColumn.test');
 
         const dataPage = createColumn(fd, colPage, {
             name: 'age',
@@ -200,7 +200,7 @@ describe('createColumn', () => {
             PAGE_TYPES.CATALOG_COLUMN,
             'createColumn.test',
         );
-        initChainPage(fd, colPage, PAGE_TYPES.CATALOG_COLUMN);
+        writeHeader(fd, colPage, PAGE_TYPES.CATALOG_COLUMN, 'createColumn.test');
 
         createColumn(fd, colPage, {
             name: 'user_id',
