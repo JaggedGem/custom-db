@@ -1,16 +1,15 @@
 import * as fs from 'fs';
 import {
     PAGE_SIZE,
-    NEXT_PAGE_ID_POSITION,
-    NEXT_SLOT_OFFSET_POSITION,
-    RECORD_COUNT_POSITION,
     PAGE_TYPES,
-    PAGE_TYPE_POSITION,
+    MH_IDENTIFICATOR_POSITION,
+    MH_NEXT_FREE_PAGE_ID_POSITION,
+    MH_PAGE_SIZE_POSITION,
+    MH_VERSION_POSITION
 } from './constants';
-import { readPage } from './page';
+import { allocatePage, readPage } from './page';
 import { StorageError, StorageErrorCode } from './errors';
 
-// todo: remove the static master header writing
 const initDatabase = (filePath: string, overwrite: boolean = false) => {
     const fd = fs.openSync(filePath, overwrite ? 'w+' : 'a+');
 
@@ -19,17 +18,17 @@ const initDatabase = (filePath: string, overwrite: boolean = false) => {
         const header = Buffer.alloc(PAGE_SIZE);
 
         // writing identificator for file type
-        header.write('CDB', 0, 'utf8');
+        header.write('CDB', MH_IDENTIFICATOR_POSITION, 'utf8');
 
         // writing the version (v1)
-        header.writeUInt8(1, 4);
+        header.writeUInt8(1, MH_VERSION_POSITION);
 
         // writing the page size (4096) from offset
-        header.writeUInt16LE(PAGE_SIZE, 5);
+        header.writeUInt16LE(PAGE_SIZE, MH_PAGE_SIZE_POSITION);
 
-        // Next Free Page ID = 2
-        // (page 0 is the header & page 1 are the table definitions so the next free page id is 2)
-        header.writeUInt32LE(2, 7);
+        // Next Free Page ID = 1
+        // (page 0 is the header) this will be immediately bumped to 2 because of the creation of the table definitions page
+        header.writeUInt32LE(1, MH_NEXT_FREE_PAGE_ID_POSITION);
 
         // save data to disk
         const written = fs.writeSync(fd, header, 0, PAGE_SIZE, 0);
@@ -48,30 +47,7 @@ const initDatabase = (filePath: string, overwrite: boolean = false) => {
             );
         }
 
-        const tableDefs = Buffer.alloc(PAGE_SIZE);
-        tableDefs.writeUInt32LE(0, NEXT_PAGE_ID_POSITION); // default next page id = 0 (no other page exists for now)
-        tableDefs.writeUInt16LE(16, NEXT_SLOT_OFFSET_POSITION); // default next offset = 16 (header size = 16 bytes)
-        tableDefs.writeUInt16LE(0, RECORD_COUNT_POSITION); // default number of tables = 0
-        // empty padding (7 bytes)
-        tableDefs.writeUInt8(PAGE_TYPES.CATALOG_TABLE, PAGE_TYPE_POSITION); // refer to PAGE_TYPES
-
-        const written1 = fs.writeSync(fd, tableDefs, 0, PAGE_SIZE, PAGE_SIZE);
-        if (written1 !== PAGE_SIZE) {
-            throw new StorageError(
-                StorageErrorCode.SHORT_WRITE,
-                'Short Write while writing table definitions page header',
-                {
-                    context: {
-                        pageId: 1,
-                        expectedBytes: PAGE_SIZE,
-                        actualBytes: written1,
-                        position: PAGE_SIZE,
-                    },
-                },
-            );
-        }
-
-        fs.fsyncSync(fd);
+        allocatePage(fd, PAGE_TYPES.CATALOG_TABLE, 'initDatabase');
     } else {
         const { page: header } = readPage(fd, 0, 'initDatabase');
 
