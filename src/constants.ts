@@ -12,6 +12,10 @@ const NEXT_SLOT_OFFSET_POSITION = 4;
 const RECORD_COUNT_POSITION = 6;
 const PAGE_TYPE_POSITION = 15;
 
+// catalog slot sizes
+const TABLE_SLOT_SIZE = 64;
+const COLUMN_SLOT_SIZE = 48;
+
 const PAGE_TYPES = {
     MASTER_NULL_MAP: 1,
     CATALOG_TABLE: 2,
@@ -42,4 +46,6 @@ export {
     PAGE_TYPE_POSITION,
     PAGE_TYPES,
     DATA_TYPES,
+    TABLE_SLOT_SIZE,
+    COLUMN_SLOT_SIZE,
 };

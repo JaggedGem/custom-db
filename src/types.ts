@@ -17,3 +17,9 @@ export interface NormalColumn extends BaseColumn {
 }
 
 export type Column = ForeignKeyColumn | NormalColumn;
+
+export interface Table {
+    name: string;
+    masterNMapPageId: number;
+    colDefsPageId: number;
+}

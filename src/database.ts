@@ -51,14 +51,20 @@ const initDatabase = (filePath: string, overwrite: boolean = false) => {
     } else {
         const { page: header } = readPage(fd, 0, 'initDatabase');
 
-        if (header.toString('utf8', 0, 3) !== 'CDB') {
+        if (
+            header.toString(
+                'utf8',
+                MH_IDENTIFICATOR_POSITION,
+                MH_IDENTIFICATOR_POSITION + 3,
+            ) !== 'CDB'
+        ) {
             throw new StorageError(
                 StorageErrorCode.IO_ERROR,
                 'Invalid database file (bad magic)',
             );
         }
 
-        const version = header.readUInt8(4);
+        const version = header.readUInt8(MH_VERSION_POSITION);
         if (version !== 1) {
             throw new StorageError(
                 StorageErrorCode.IO_ERROR,
@@ -66,7 +72,7 @@ const initDatabase = (filePath: string, overwrite: boolean = false) => {
             );
         }
 
-        const pageSize = header.readUInt16LE(5);
+        const pageSize = header.readUInt16LE(MH_PAGE_SIZE_POSITION);
         if (pageSize !== PAGE_SIZE) {
             throw new StorageError(
                 StorageErrorCode.IO_ERROR,

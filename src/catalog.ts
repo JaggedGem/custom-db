@@ -7,6 +7,8 @@ import {
     RECORD_COUNT_POSITION,
     DATA_TYPES,
     PAGE_TYPES,
+    TABLE_SLOT_SIZE,
+    COLUMN_SLOT_SIZE,
 } from './constants';
 import {
     StorageErrorCode,
@@ -19,7 +21,7 @@ import {
     createFixedPage,
     createSlottedPage,
 } from './data-pages';
-import { Column, ForeignKeyColumn } from './types';
+import { Column, ForeignKeyColumn, Table } from './types';
 
 const isForeignKey = (col: Column): col is ForeignKeyColumn =>
     col.isForeignKey === true;
@@ -42,13 +44,11 @@ const createColumn = (fd: number, startingPageId: number, column: Column) => {
     let pageId = getLatestPage(fd, startingPageId, PAGE_TYPES.CATALOG_COLUMN);
     let colDefs = readPage(fd, pageId, 'createColumn');
 
-    // name(12) + type(1) + dataPageId(4) + fkTableName(12) + fkColumnName(12) + padding(7)
-    const SLOT_SIZE = 48;
     let nextOffset = colDefs.nextOffset;
     let nrColumns = colDefs.recordCount;
 
     // check if the page has space for a new 48-byte definition
-    if (nextOffset + SLOT_SIZE > PAGE_SIZE) {
+    if (nextOffset + COLUMN_SLOT_SIZE > PAGE_SIZE) {
         const newPageId = allocatePage(
             fd,
             PAGE_TYPES.CATALOG_COLUMN,
@@ -161,7 +161,7 @@ const createColumn = (fd: number, startingPageId: number, column: Column) => {
 
     // update metadata for this page
     colDefs.page.writeUInt16LE(
-        nextOffset + SLOT_SIZE,
+        nextOffset + COLUMN_SLOT_SIZE,
         NEXT_SLOT_OFFSET_POSITION,
     );
     colDefs.page.writeUInt16LE(nrColumns + 1, RECORD_COUNT_POSITION);
@@ -206,8 +206,6 @@ const createTable = (fd: number, name: string, columns: Column[]) => {
         );
     }
 
-    const SLOT_SIZE = 64;
-
     let pageId = getLatestPage(fd, 1, PAGE_TYPES.CATALOG_TABLE);
     let tableDefs = readPage(fd, pageId, 'createTable');
 
@@ -215,7 +213,7 @@ const createTable = (fd: number, name: string, columns: Column[]) => {
     let nrTables = tableDefs.recordCount;
 
     // check if the page has space for a new 64-byte definition
-    if (nextOffset + SLOT_SIZE > PAGE_SIZE) {
+    if (nextOffset + TABLE_SLOT_SIZE > PAGE_SIZE) {
         const newPageId = allocatePage(
             fd,
             PAGE_TYPES.CATALOG_TABLE,
@@ -287,7 +285,7 @@ const createTable = (fd: number, name: string, columns: Column[]) => {
     columns.forEach((col: Column) => createColumn(fd, columnDefsId, col));
 
     tableDefs.page.writeUInt16LE(
-        nextOffset + SLOT_SIZE,
+        nextOffset + TABLE_SLOT_SIZE,
         NEXT_SLOT_OFFSET_POSITION,
     );
     tableDefs.page.writeUInt16LE(nrTables + 1, RECORD_COUNT_POSITION);
@@ -316,4 +314,66 @@ const createTable = (fd: number, name: string, columns: Column[]) => {
     fs.fsyncSync(fd);
 };
 
-export { createColumn, createTable, isForeignKey };
+// todo: implement caching functionality
+const getTable = (fd: number, name: string) => {
+    const nameBuffer = Buffer.from(name, 'utf8');
+    if (nameBuffer.length >= 12) {
+        throw new ValidationError(
+            ValidationErrorCode.BAD_INPUT,
+            'The name should not exceed 12 bytes',
+        );
+    }
+
+    let parsedPage = readPage(fd, 1, 'getTable');
+    let offset = 16;
+    let page = parsedPage.page;
+    let nextPageId = parsedPage.nextPageId;
+    let tableCount = parsedPage.recordCount;
+
+    while (true) {
+        for (let i = 0; i < tableCount; i++) {
+            // early break condition as a empty name means no more entries
+            if (page[offset] === 0) {
+                break;
+            }
+
+            if (
+                nameBuffer.compare(page, offset, offset + nameBuffer.length) !==
+                    0 ||
+                page[offset + nameBuffer.length] !== 0
+            ) {
+                offset += TABLE_SLOT_SIZE;
+                continue;
+            }
+
+            offset += 12;
+
+            const masterNMapPageId = page.readUInt32LE(offset);
+            offset += 4;
+
+            const colDefsPageId = page.readUInt32LE(offset);
+            offset += TABLE_SLOT_SIZE - (12 + 4 + 4);
+
+            return {
+                name,
+                masterNMapPageId,
+                colDefsPageId,
+            };
+        }
+
+        if (nextPageId === 0) {
+            throw new ValidationError(
+                ValidationErrorCode.BAD_INPUT,
+                'There exists no table with the name ' + name,
+            );
+        }
+
+        parsedPage = readPage(fd, nextPageId, 'getTable');
+        offset = 16;
+        page = parsedPage.page;
+        nextPageId = parsedPage.nextPageId;
+        tableCount = parsedPage.recordCount;
+    }
+};
+
+export { createColumn, createTable, isForeignKey, getTable };
