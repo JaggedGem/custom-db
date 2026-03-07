@@ -6,7 +6,7 @@ import {
     RECORD_COUNT_POSITION,
     PAGE_TYPE_POSITION,
     PAGE_TYPES,
-    PageType
+    PageType,
 } from './constants';
 import {
     StorageErrorCode,
@@ -20,7 +20,7 @@ const writeHeader = (
     pageId: number,
     pageType: PageType,
     caller: string,
-): Buffer<ArrayBufferLike> => {
+) => {
     const buf = Buffer.alloc(PAGE_SIZE);
 
     // Header Structure

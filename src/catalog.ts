@@ -85,7 +85,7 @@ const createColumn = (fd: number, startingPageId: number, column: Column) => {
             newPageId,
             PAGE_TYPES.CATALOG_COLUMN,
             'createColumn',
-        ) as any; // todo: remove the any type casting by using the readPage method 
+        );
         pageId = newPageId;
 
         nextOffset = 16;
@@ -252,7 +252,7 @@ const createTable = (fd: number, name: string, columns: Column[]) => {
             newPageId,
             PAGE_TYPES.CATALOG_TABLE,
             'createTable',
-        ) as any; // todo: remove the any type casting by using the readPage method
+        );
         pageId = newPageId;
 
         nextOffset = 16;

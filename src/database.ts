@@ -5,7 +5,7 @@ import {
     MH_IDENTIFICATOR_POSITION,
     MH_NEXT_FREE_PAGE_ID_POSITION,
     MH_PAGE_SIZE_POSITION,
-    MH_VERSION_POSITION
+    MH_VERSION_POSITION,
 } from './constants';
 import { allocatePage, readPage } from './page';
 import { StorageError, StorageErrorCode } from './errors';
