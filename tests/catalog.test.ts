@@ -40,7 +40,8 @@ describe('catalog', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
             const colDefsPageId = allocatePage(
                 fd,
                 PAGE_TYPES.CATALOG_COLUMN,
@@ -65,7 +66,7 @@ describe('catalog', () => {
             expect(colPage.page.readUInt8(16 + 12)).toBe(DATA_TYPES.INTEGER);
             expect(colPage.page.readUInt32LE(16 + 13)).toBe(dataPageId);
 
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }
@@ -75,7 +76,8 @@ describe('catalog', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
             const colDefsPageId = allocatePage(
                 fd,
                 PAGE_TYPES.CATALOG_COLUMN,
@@ -110,7 +112,7 @@ describe('catalog', () => {
                     .replace(/\0+$/, ''),
             ).toBe('id');
 
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }
@@ -120,7 +122,8 @@ describe('catalog', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
             const colDefsPageId = allocatePage(
                 fd,
                 PAGE_TYPES.CATALOG_COLUMN,
@@ -163,7 +166,7 @@ describe('catalog', () => {
                 }),
             ).toThrow(ValidationError);
 
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }
@@ -173,7 +176,9 @@ describe('catalog', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
+
             createTable(fd, 'users', [
                 { name: 'id', type: 'integer', isForeignKey: false },
                 { name: 'name', type: 'string', isForeignKey: false },
@@ -183,7 +188,7 @@ describe('catalog', () => {
             expect(tableCatalogPage.recordCount).toBe(1);
             expect(tableCatalogPage.nextOffset).toBe(16 + TABLE_SLOT_SIZE);
 
-            const table = getTable(fd, 'users');
+            const table = getTable('users', db);
             expect(table.name).toBe('users');
             expect(table.masterNMapPageId).toBeGreaterThan(1);
             expect(table.colDefsPageId).toBeGreaterThan(1);
@@ -195,7 +200,7 @@ describe('catalog', () => {
             );
             expect(colDefsPage.readUInt16LE(6)).toBe(2);
 
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }
@@ -205,7 +210,8 @@ describe('catalog', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
 
             expect(() => createTable(fd, 'this_name_is_too_long', [])).toThrow(
                 ValidationError,
@@ -213,12 +219,12 @@ describe('catalog', () => {
 
             createTable(fd, 'users', []);
 
-            expect(() => getTable(fd, 'this_name_is_too_long')).toThrow(
+            expect(() => getTable('this_name_is_too_long', db)).toThrow(
                 ValidationError,
             );
-            expect(() => getTable(fd, 'missing')).toThrow(ValidationError);
+            expect(() => getTable('missing', db)).toThrow(ValidationError);
 
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }

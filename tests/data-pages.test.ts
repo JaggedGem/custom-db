@@ -15,14 +15,15 @@ describe('data-pages', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
             const pageId = createBitmapPage(fd);
             const page = readPage(fd, pageId, 'data-pages.test');
 
             expect(page.pageType).toBe(PAGE_TYPES.DATA_BITMAP);
             expect(page.page.readUInt32LE(8)).toBe(0);
 
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }
@@ -32,13 +33,14 @@ describe('data-pages', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
             const pageId = createFixedPage(fd);
             const page = readPage(fd, pageId, 'data-pages.test');
 
             expect(page.pageType).toBe(PAGE_TYPES.DATA_FIXED);
 
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }
@@ -48,14 +50,15 @@ describe('data-pages', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
             const pageId = createSlottedPage(fd);
             const page = readPage(fd, pageId, 'data-pages.test');
 
             expect(page.pageType).toBe(PAGE_TYPES.DATA_SLOTTED);
             expect(page.page.readUInt16LE(12)).toBe(PAGE_SIZE);
 
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }

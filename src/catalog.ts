@@ -21,7 +21,7 @@ import {
     createFixedPage,
     createSlottedPage,
 } from './data-pages';
-import { Column, ForeignKeyColumn, Table } from './types';
+import { Column, ForeignKeyColumn, DatabaseContext, Table } from './types';
 
 const isForeignKey = (col: Column): col is ForeignKeyColumn =>
     col.isForeignKey === true;
@@ -314,8 +314,13 @@ const createTable = (fd: number, name: string, columns: Column[]) => {
     fs.fsyncSync(fd);
 };
 
-// todo: implement caching functionality
-const getTable = (fd: number, name: string) => {
+const getTable = (name: string, db: DatabaseContext): Table => {
+    const cachedTable = db.tableCache.get(name);
+
+    if (cachedTable) {
+        return cachedTable;
+    }
+
     const nameBuffer = Buffer.from(name, 'utf8');
     if (nameBuffer.length >= 12) {
         throw new ValidationError(
@@ -324,6 +329,7 @@ const getTable = (fd: number, name: string) => {
         );
     }
 
+    const fd = db.fd;
     let parsedPage = readPage(fd, 1, 'getTable');
     let offset = 16;
     let page = parsedPage.page;
@@ -337,6 +343,7 @@ const getTable = (fd: number, name: string) => {
                 break;
             }
 
+            // check if the name of the table matches the name we're searching for
             if (
                 nameBuffer.compare(page, offset, offset + nameBuffer.length) !==
                     0 ||
@@ -354,6 +361,13 @@ const getTable = (fd: number, name: string) => {
             const colDefsPageId = page.readUInt32LE(offset);
             offset += TABLE_SLOT_SIZE - (12 + 4 + 4);
 
+            // update the cache
+            db.tableCache.set(name, {
+                name,
+                masterNMapPageId,
+                colDefsPageId,
+            });
+
             return {
                 name,
                 masterNMapPageId,
@@ -361,6 +375,8 @@ const getTable = (fd: number, name: string) => {
             };
         }
 
+        // if nextPageId = 0 that means that there are no more table definition pages
+        // and that the table with the specified name does not exist
         if (nextPageId === 0) {
             throw new ValidationError(
                 ValidationErrorCode.BAD_INPUT,
@@ -368,6 +384,7 @@ const getTable = (fd: number, name: string) => {
             );
         }
 
+        // go to the next page
         parsedPage = readPage(fd, nextPageId, 'getTable');
         offset = 16;
         page = parsedPage.page;

@@ -18,7 +18,8 @@ describe('database', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
             const header = readPage(fd, 0, 'database.test');
             const page1 = readPage(fd, 1, 'database.test');
 
@@ -35,7 +36,7 @@ describe('database', () => {
             );
             expect(page1.pageType).toBe(PAGE_TYPES.CATALOG_TABLE);
 
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }
@@ -45,15 +46,17 @@ describe('database', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd1 = initDatabase(dbPath, true);
+            const db1 = initDatabase(dbPath, true);
+            const fd1 = db1.fd;
             const nextPageBeforeClose = readPage(
                 fd1,
                 0,
                 'database.test',
             ).page.readUInt32LE(7);
-            closeDatabase(fd1);
+            closeDatabase(db1);
 
-            const fd2 = initDatabase(dbPath, false);
+            const db2 = initDatabase(dbPath, true);
+            const fd2 = db2.fd;
             const nextPageAfterReopen = readPage(
                 fd2,
                 0,
@@ -61,7 +64,7 @@ describe('database', () => {
             ).page.readUInt32LE(7);
 
             expect(nextPageAfterReopen).toBe(nextPageBeforeClose);
-            closeDatabase(fd2);
+            closeDatabase(db2);
         } finally {
             cleanupTempDbFile(dbPath);
         }

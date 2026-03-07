@@ -19,7 +19,8 @@ describe('page', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
             const pageId = allocatePage(fd, PAGE_TYPES.DATA_FIXED, 'page.test');
 
             const page = writeHeader(
@@ -33,7 +34,7 @@ describe('page', () => {
             expect(page.readUInt16LE(6)).toBe(0);
             expect(page.readUInt8(15)).toBe(PAGE_TYPES.DATA_BITMAP);
 
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }
@@ -43,7 +44,8 @@ describe('page', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
             const pageId = allocatePage(
                 fd,
                 PAGE_TYPES.DATA_SLOTTED,
@@ -54,7 +56,7 @@ describe('page', () => {
             const header = readPage(fd, 0, 'page.test').page;
             expect(header.readUInt32LE(7)).toBe(3);
 
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }
@@ -64,11 +66,12 @@ describe('page', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
             expect(() => allocatePage(fd, 255 as any, 'page.test')).toThrow(
                 ValidationError,
             );
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }
@@ -78,9 +81,10 @@ describe('page', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
             expect(() => readPage(fd, 99, 'page.test')).toThrow(StorageError);
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }
@@ -90,7 +94,8 @@ describe('page', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
             const pageId = allocatePage(fd, PAGE_TYPES.DATA_FIXED, 'page.test');
 
             expect(
@@ -100,7 +105,7 @@ describe('page', () => {
                 verifyPageType(fd, pageId, 'page.test', PAGE_TYPES.DATA_BITMAP),
             ).toBe(false);
 
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }
@@ -110,7 +115,8 @@ describe('page', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
             const pageId = allocatePage(fd, PAGE_TYPES.DATA_FIXED, 'page.test');
             const page = Buffer.alloc(PAGE_SIZE);
             page.write('HELLO', 0, 'utf8');
@@ -119,7 +125,7 @@ describe('page', () => {
             const loaded = loadPage(fd, pageId, 'page.test');
             expect(loaded.toString('utf8', 0, 5)).toBe('HELLO');
 
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }
@@ -129,7 +135,8 @@ describe('page', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
             const p1 = allocatePage(fd, PAGE_TYPES.CATALOG_COLUMN, 'page.test');
             const p2 = allocatePage(fd, PAGE_TYPES.CATALOG_COLUMN, 'page.test');
 
@@ -139,7 +146,7 @@ describe('page', () => {
 
             expect(getLatestPage(fd, p1, PAGE_TYPES.CATALOG_COLUMN)).toBe(p2);
 
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }
@@ -149,7 +156,8 @@ describe('page', () => {
         const dbPath = createTempDbFile();
 
         try {
-            const fd = initDatabase(dbPath, true);
+            const db = initDatabase(dbPath, true);
+            const fd = db.fd;
             const p1 = allocatePage(fd, PAGE_TYPES.CATALOG_COLUMN, 'page.test');
             const p2 = allocatePage(fd, PAGE_TYPES.DATA_FIXED, 'page.test');
 
@@ -161,7 +169,7 @@ describe('page', () => {
                 getLatestPage(fd, p1, PAGE_TYPES.CATALOG_COLUMN),
             ).toThrow(StorageError);
 
-            closeDatabase(fd);
+            closeDatabase(db);
         } finally {
             cleanupTempDbFile(dbPath);
         }

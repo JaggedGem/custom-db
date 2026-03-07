@@ -9,8 +9,12 @@ import {
 } from './constants';
 import { allocatePage, readPage } from './page';
 import { StorageError, StorageErrorCode } from './errors';
+import { DatabaseContext, Table } from './types';
 
-const initDatabase = (filePath: string, overwrite: boolean = false) => {
+const initDatabase = (
+    filePath: string,
+    overwrite: boolean = false,
+): DatabaseContext => {
     const fd = fs.openSync(filePath, overwrite ? 'w+' : 'a+');
 
     const stats = fs.fstatSync(fd);
@@ -87,12 +91,19 @@ const initDatabase = (filePath: string, overwrite: boolean = false) => {
         }
     }
 
-    return fd;
+    const tableCache = new Map<string, Table>();
+
+    return {
+        fd,
+        tableCache,
+    };
 };
 
-const closeDatabase = (fd: number) => {
-    fs.fsyncSync(fd);
-    fs.closeSync(fd);
+const closeDatabase = (db: DatabaseContext) => {
+    fs.fsyncSync(db.fd);
+    fs.closeSync(db.fd);
+
+    db.tableCache.clear();
 };
 
 export { initDatabase, closeDatabase };

@@ -23,3 +23,8 @@ export interface Table {
     masterNMapPageId: number;
     colDefsPageId: number;
 }
+
+export interface DatabaseContext {
+    fd: number;
+    tableCache: Map<string, Table>;
+}
