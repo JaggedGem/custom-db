@@ -8,10 +8,13 @@ import {
     PAGE_TYPES,
     SLOT_MAP_SLOT_SIZE,
     SLOT_MAP_SLOT,
+    DELETED_SLOT,
 } from './constants';
 import {
     StorageErrorCode,
     StorageError,
+    ValidationError,
+    ValidationErrorCode,
 } from './errors';
 
 const writeSlotMapEntry = (
@@ -109,4 +112,58 @@ const writeSlotMapEntry = (
     }
 
     fs.fsyncSync(fd);
+};
+
+const readSlotMapEntry = (
+    fd: number,
+    startingPageId: number,
+    rowId: number,
+) => {
+    let parsedPage = readPage(fd, startingPageId, 'readSlotMapEntry');
+    let offset = 16;
+    let page = parsedPage.page;
+    let nextPageId = parsedPage.nextPageId;
+    let entryCount = parsedPage.recordCount;
+
+    while (true) {
+        for (let i = 0; i < entryCount; i++) {
+            // check if the row id matches the row id we're searching for
+            if (page.readUInt32LE(offset + SLOT_MAP_SLOT.ROW_ID) !== rowId) {
+                offset += SLOT_MAP_SLOT_SIZE;
+                continue;
+            }
+
+            const slotIndex = page.readUInt32LE(
+                offset + SLOT_MAP_SLOT.SLOT_INDEX,
+            );
+
+            if (slotIndex === DELETED_SLOT) {
+                throw new ValidationError(
+                    ValidationErrorCode.BAD_INPUT,
+                    'There exists no entry with the rowId ' + rowId,
+                );
+            }
+
+            return {
+                rowId,
+                slotIndex,
+            };
+        }
+
+        // if nextPageId = 0 that means that there are no more slot map pages
+        // and that the entry with the specified rowId does not exist
+        if (nextPageId === 0) {
+            throw new ValidationError(
+                ValidationErrorCode.BAD_INPUT,
+                'There exists no entry with the rowId ' + rowId,
+            );
+        }
+
+        // go to the next page
+        parsedPage = readPage(fd, nextPageId, 'readSlotMapEntry');
+        offset = 16;
+        page = parsedPage.page;
+        nextPageId = parsedPage.nextPageId;
+        entryCount = parsedPage.recordCount;
+    }
 };
