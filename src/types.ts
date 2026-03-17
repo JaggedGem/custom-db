@@ -49,3 +49,6 @@ export interface DatabaseContext {
     tableCache: Map<string, Table>;
     columnCache: Map<string, Map<string, ResolvedColumn>>; // string - table name; Map<string, ResolvedColumn> - name -> column associaton
 }
+
+export const isForeignKey = (col: Column): col is ForeignKeyColumn =>
+    col.type === 'foreign_key';

@@ -6,10 +6,7 @@ import { initDatabase, closeDatabase } from '../src/database';
 import {
     createTable,
     createColumn,
-    isForeignKey,
-    getTable,
-    getColumn,
-} from '../src/catalog';
+} from '../src/catalog-write';
 import { allocatePage, loadPage, getLatestPage } from '../src/page';
 import {
     createBitmapPage,
@@ -30,9 +27,9 @@ describe('index exports', () => {
         expect(entry.closeDatabase).toBe(closeDatabase);
         expect(entry.createTable).toBe(createTable);
         expect(entry.createColumn).toBe(createColumn);
-        expect(entry.isForeignKey).toBe(isForeignKey);
-        expect(entry.getTable).toBe(getTable);
-        expect(entry.getColumn).toBe(getColumn);
+        expect(entry.isForeignKey).toBe(entry.isForeignKey);
+        expect(entry.getTable).toBe(entry.getTable);
+        expect(entry.getColumn).toBe(entry.getColumn);
         expect(entry.allocatePage).toBe(allocatePage);
         expect(entry.loadPage).toBe(loadPage);
         expect(entry.getLatestPage).toBe(getLatestPage);

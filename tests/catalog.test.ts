@@ -11,14 +11,12 @@ import { closeDatabase, initDatabase } from '../src/database';
 import {
     createColumn,
     createTable,
-    getColumn,
-    getTable,
-    isForeignKey,
-} from '../src/catalog';
+} from '../src/catalog-write';
 import { allocatePage, loadPage, readPage } from '../src/page';
 import { ValidationError } from '../src/errors';
-import type { Column, Table } from '../src/types';
+import { isForeignKey, type Column, type Table } from '../src/types';
 import { cleanupTempDbFile, createTempDbFile } from './helpers';
+import { getColumn, getTable } from '../src/catalog-read';
 
 describe('catalog', () => {
     it('isForeignKey narrows union correctly', () => {
