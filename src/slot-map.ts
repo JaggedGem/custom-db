@@ -167,3 +167,74 @@ const readSlotMapEntry = (
         entryCount = parsedPage.recordCount;
     }
 };
+
+const deleteSlotMapEntry = (
+    fd: number,
+    startingPageId: number,
+    rowId: number,
+) => {
+    let pageId = startingPageId;
+    let parsedPage = readPage(fd, startingPageId, 'deleteSlotMapEntry');
+    let offset = 16;
+    let page = parsedPage.page;
+    let nextPageId = parsedPage.nextPageId;
+    let entryCount = parsedPage.recordCount;
+
+    while (true) {
+        for (let i = 0; i < entryCount; i++) {
+            // check if the row id matches the row id we're searching for
+            if (page.readUInt32LE(offset + SLOT_MAP_SLOT.ROW_ID) !== rowId) {
+                offset += SLOT_MAP_SLOT_SIZE;
+                continue;
+            }
+
+            page.writeUInt32LE(DELETED_SLOT, offset + SLOT_MAP_SLOT.SLOT_INDEX);
+
+            const written = fs.writeSync(
+                fd,
+                page,
+                0,
+                PAGE_SIZE,
+                pageId * PAGE_SIZE,
+            );
+
+            if (written !== PAGE_SIZE) {
+                throw new StorageError(
+                    StorageErrorCode.SHORT_WRITE,
+                    'Short Write while writing the updated page to disk',
+                    {
+                        context: {
+                            pageId,
+                            expectedBytes: PAGE_SIZE,
+                            actualBytes: written,
+                            position: pageId * PAGE_SIZE,
+                        },
+                    },
+                );
+            }
+
+            fs.fsyncSync(fd);
+
+            return;
+        }
+
+        // if nextPageId = 0 that means that there are no more slot map pages
+        // and that the entry with the specified rowId does not exist
+        if (nextPageId === 0) {
+            throw new ValidationError(
+                ValidationErrorCode.BAD_INPUT,
+                'There exists no entry with the rowId ' + rowId,
+            );
+        }
+
+        // go to the next page
+        pageId = nextPageId;
+        parsedPage = readPage(fd, nextPageId, 'deleteSlotMapEntry');
+        offset = 16;
+        page = parsedPage.page;
+        nextPageId = parsedPage.nextPageId;
+        entryCount = parsedPage.recordCount;
+    }
+};
+
+export { writeSlotMapEntry, readSlotMapEntry, deleteSlotMapEntry };
