@@ -93,14 +93,9 @@ const createColumn = (
             );
         }
 
-        // create the header for the new definitions page
-        colDefs.page = writeHeader(
-            fd,
-            newPageId,
-            PAGE_TYPES.CATALOG_COLUMN,
-            'createColumn',
-        );
         pageId = newPageId;
+
+        colDefs = readPage(fd, pageId, 'createColumn');
 
         nextOffset = 16;
         nrColumns = 0;

@@ -13,9 +13,10 @@ const NEXT_SLOT_OFFSET_POSITION = 4;
 const RECORD_COUNT_POSITION = 6;
 const PAGE_TYPE_POSITION = 15;
 
-// catalog slot sizes
+// slot sizes
 const TABLE_SLOT_SIZE = 64;
 const COLUMN_SLOT_SIZE = 48;
+const SLOT_MAP_SLOT_SIZE = 8;
 
 const PAGE_TYPES = {
     MASTER_NULL_MAP: 1,
@@ -62,6 +63,11 @@ const TABLE_SLOT = {
     COL_DEFS: 24,
 } as const;
 
+const SLOT_MAP_SLOT = {
+    ROW_ID: 0,
+    SLOT_INDEX: 4,
+} as const;
+
 export type PageType = (typeof PAGE_TYPES)[keyof typeof PAGE_TYPES];
 
 export {
@@ -82,4 +88,6 @@ export {
     COL_SLOT,
     TABLE_SLOT,
     DATA_TYPE_LOOKUP,
+    SLOT_MAP_SLOT_SIZE,
+    SLOT_MAP_SLOT,
 };
