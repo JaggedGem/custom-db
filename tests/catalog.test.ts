@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+    COL_SLOT,
     COLUMN_SLOT_SIZE,
     DATA_TYPES,
     PAGE_TYPES,
@@ -10,29 +11,29 @@ import { closeDatabase, initDatabase } from '../src/database';
 import {
     createColumn,
     createTable,
+    getColumn,
     getTable,
     isForeignKey,
 } from '../src/catalog';
-import { allocatePage, loadPage, readPage, writeHeader } from '../src/page';
+import { allocatePage, loadPage, readPage } from '../src/page';
 import { ValidationError } from '../src/errors';
-import type { Column } from '../src/types';
+import type { Column, Table } from '../src/types';
 import { cleanupTempDbFile, createTempDbFile } from './helpers';
 
 describe('catalog', () => {
     it('isForeignKey narrows union correctly', () => {
         const fk: Column = {
             name: 'user_id',
-            isForeignKey: true,
+            type: 'foreign_key',
             foreignKey: { table: 'users', column: 'id' },
         };
 
-        const normal: Column = {
-            name: 'age',
-            type: 'integer',
-            isForeignKey: false,
-        };
+        const normal: Column = { name: 'age', type: 'integer' };
 
         expect(isForeignKey(fk)).toBe(true);
+        if (isForeignKey(fk)) {
+            expect(fk.foreignKey.table).toBe('users');
+        }
         expect(isForeignKey(normal)).toBe(false);
     });
 
@@ -47,70 +48,25 @@ describe('catalog', () => {
                 PAGE_TYPES.CATALOG_COLUMN,
                 'catalog.test',
             );
-            writeHeader(
-                fd,
-                colDefsPageId,
-                PAGE_TYPES.CATALOG_COLUMN,
-                'catalog.test',
-            );
 
-            const dataPageId = createColumn(fd, colDefsPageId, {
+            const dataPageId = createColumn(db, colDefsPageId, {
                 name: 'age',
                 type: 'integer',
-                isForeignKey: false,
             });
 
             const colPage = readPage(fd, colDefsPageId, 'catalog.test');
             expect(colPage.recordCount).toBe(1);
             expect(colPage.nextOffset).toBe(16 + COLUMN_SLOT_SIZE);
-            expect(colPage.page.readUInt8(16 + 12)).toBe(DATA_TYPES.INTEGER);
-            expect(colPage.page.readUInt32LE(16 + 13)).toBe(dataPageId);
-
-            closeDatabase(db);
-        } finally {
-            cleanupTempDbFile(dbPath);
-        }
-    });
-
-    it('createColumn writes foreign key metadata', () => {
-        const dbPath = createTempDbFile();
-
-        try {
-            const db = initDatabase(dbPath, true);
-            const fd = db.fd;
-            const colDefsPageId = allocatePage(
-                fd,
-                PAGE_TYPES.CATALOG_COLUMN,
-                'catalog.test',
-            );
-            writeHeader(
-                fd,
-                colDefsPageId,
-                PAGE_TYPES.CATALOG_COLUMN,
-                'catalog.test',
-            );
-
-            createColumn(fd, colDefsPageId, {
-                name: 'user_id',
-                isForeignKey: true,
-                foreignKey: { table: 'users', column: 'id' },
-            });
-
-            const colPage = readPage(fd, colDefsPageId, 'catalog.test');
             const slotOffset = 16;
-            expect(colPage.page.readUInt8(slotOffset + 12)).toBe(
-                DATA_TYPES.FOREIGN_KEY,
+            expect(colPage.page.readUInt8(slotOffset + COL_SLOT.TYPE)).toBe(
+                DATA_TYPES.INTEGER,
             );
             expect(
-                colPage.page
-                    .toString('utf8', slotOffset + 17, slotOffset + 29)
-                    .replace(/\0+$/, ''),
-            ).toBe('users');
-            expect(
-                colPage.page
-                    .toString('utf8', slotOffset + 29, slotOffset + 41)
-                    .replace(/\0+$/, ''),
-            ).toBe('id');
+                colPage.page.readUInt32LE(slotOffset + COL_SLOT.DATA_PAGE_ID),
+            ).toBe(dataPageId);
+
+            const dataPage = readPage(fd, dataPageId, 'catalog.test');
+            expect(dataPage.pageType).toBe(PAGE_TYPES.DATA_FIXED);
 
             closeDatabase(db);
         } finally {
@@ -118,7 +74,7 @@ describe('catalog', () => {
         }
     });
 
-    it('createColumn rejects too-long column names and FK metadata names', () => {
+    it('createColumn rejects bad input and missing foreign key info', () => {
         const dbPath = createTempDbFile();
 
         try {
@@ -126,43 +82,30 @@ describe('catalog', () => {
             const fd = db.fd;
             const colDefsPageId = allocatePage(
                 fd,
-                PAGE_TYPES.CATALOG_COLUMN,
-                'catalog.test',
-            );
-            writeHeader(
-                fd,
-                colDefsPageId,
                 PAGE_TYPES.CATALOG_COLUMN,
                 'catalog.test',
             );
 
             expect(() =>
-                createColumn(fd, colDefsPageId, {
+                createColumn(db, colDefsPageId, {
                     name: 'column_name_too_long',
                     type: 'integer',
-                    isForeignKey: false,
                 }),
             ).toThrow(ValidationError);
 
             expect(() =>
-                createColumn(fd, colDefsPageId, {
+                createColumn(db, colDefsPageId, {
                     name: 'fk',
-                    isForeignKey: true,
-                    foreignKey: {
-                        table: 'table_name_too_long',
-                        column: 'id',
-                    },
+                    type: 'foreign_key',
+                    foreignKey: { table: '', column: 'id' },
                 }),
             ).toThrow(ValidationError);
 
             expect(() =>
-                createColumn(fd, colDefsPageId, {
+                createColumn(db, colDefsPageId, {
                     name: 'fk',
-                    isForeignKey: true,
-                    foreignKey: {
-                        table: 'users',
-                        column: 'column_name_too_long',
-                    },
+                    type: 'foreign_key',
+                    foreignKey: { table: 'users', column: '' },
                 }),
             ).toThrow(ValidationError);
 
@@ -172,19 +115,18 @@ describe('catalog', () => {
         }
     });
 
-    it('createTable writes table entry and getTable finds it', () => {
+    it('createTable writes table entry, caches it and getTable retrieves it', () => {
         const dbPath = createTempDbFile();
 
         try {
             const db = initDatabase(dbPath, true);
-            const fd = db.fd;
 
-            createTable(fd, 'users', [
-                { name: 'id', type: 'integer', isForeignKey: false },
-                { name: 'name', type: 'string', isForeignKey: false },
+            createTable(db, 'users', [
+                { name: 'id', type: 'integer' },
+                { name: 'name', type: 'string' },
             ]);
 
-            const tableCatalogPage = readPage(fd, 1, 'catalog.test');
+            const tableCatalogPage = readPage(db.fd, 1, 'catalog.test');
             expect(tableCatalogPage.recordCount).toBe(1);
             expect(tableCatalogPage.nextOffset).toBe(16 + TABLE_SLOT_SIZE);
 
@@ -192,13 +134,47 @@ describe('catalog', () => {
             expect(table.name).toBe('users');
             expect(table.masterNMapPageId).toBeGreaterThan(1);
             expect(table.colDefsPageId).toBeGreaterThan(1);
+            expect(table.nextRowId).toBe(0);
+            expect(table.slotMapId).toBeGreaterThan(1);
+
+            const cached = getTable('users', db);
+            expect(cached).toStrictEqual(table);
 
             const colDefsPage = loadPage(
-                fd,
+                db.fd,
                 table.colDefsPageId,
                 'catalog.test',
             );
             expect(colDefsPage.readUInt16LE(6)).toBe(2);
+
+            closeDatabase(db);
+        } finally {
+            cleanupTempDbFile(dbPath);
+        }
+    });
+
+    it('getColumn resolves column metadata and caches lookups', () => {
+        const dbPath = createTempDbFile();
+
+        try {
+            const db = initDatabase(dbPath, true);
+            createTable(db, 'users', [
+                { name: 'id', type: 'integer' },
+                { name: 'age', type: 'integer' },
+            ]);
+
+            const table: Table = getTable('users', db);
+
+            const first = getColumn('id', table, db);
+            expect(first.type).toBe('integer');
+            expect(first.columnDataId).toBeGreaterThan(1);
+
+            const second = getColumn('id', table, db);
+            expect(second).toStrictEqual(first);
+
+            expect(() => getColumn('missing', table, db)).toThrow(
+                ValidationError,
+            );
 
             closeDatabase(db);
         } finally {
@@ -211,13 +187,12 @@ describe('catalog', () => {
 
         try {
             const db = initDatabase(dbPath, true);
-            const fd = db.fd;
 
-            expect(() => createTable(fd, 'this_name_is_too_long', [])).toThrow(
-                ValidationError,
-            );
+            expect(() =>
+                createTable(db, 'this_name_is_too_long', []),
+            ).toThrow(ValidationError);
 
-            createTable(fd, 'users', []);
+            createTable(db, 'users', []);
 
             expect(() => getTable('this_name_is_too_long', db)).toThrow(
                 ValidationError,

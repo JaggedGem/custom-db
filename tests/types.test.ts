@@ -9,14 +9,13 @@ import type {
 
 describe('types', () => {
     it('defines the expected normal column shape', () => {
-        expectTypeOf<NormalColumn['isForeignKey']>().toEqualTypeOf<false>();
         expectTypeOf<NormalColumn['type']>().toEqualTypeOf<
             'boolean' | 'integer' | 'string'
         >();
     });
 
     it('defines the expected foreign key column shape', () => {
-        expectTypeOf<ForeignKeyColumn['isForeignKey']>().toEqualTypeOf<true>();
+        expectTypeOf<ForeignKeyColumn['type']>().toEqualTypeOf<'foreign_key'>();
         expectTypeOf<
             ForeignKeyColumn['foreignKey']['table']
         >().toEqualTypeOf<string>();
@@ -31,6 +30,8 @@ describe('types', () => {
         const table: Table = {
             name: 'users',
             masterNMapPageId: 10,
+            nextRowId: 0,
+            slotMapId: 12,
             colDefsPageId: 11,
         };
 

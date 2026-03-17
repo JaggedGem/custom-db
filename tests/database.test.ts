@@ -55,7 +55,7 @@ describe('database', () => {
             ).page.readUInt32LE(7);
             closeDatabase(db1);
 
-            const db2 = initDatabase(dbPath, true);
+            const db2 = initDatabase(dbPath, false);
             const fd2 = db2.fd;
             const nextPageAfterReopen = readPage(
                 fd2,
