@@ -1,4 +1,5 @@
 const PAGE_SIZE = 4096;
+const DELETED_SLOT = 0xffffffff;
 
 // master header
 const MH_IDENTIFICATOR_POSITION = 0;
@@ -23,6 +24,7 @@ const PAGE_TYPES = {
     DATA_SLOTTED: 4,
     DATA_FIXED: 5,
     DATA_BITMAP: 6,
+    SLOT_MAP: 7,
 } as const;
 
 const DATA_TYPES = {
@@ -31,6 +33,34 @@ const DATA_TYPES = {
     STRING: 3,
     FOREIGN_KEY: 4,
 };
+
+const DATA_TYPE_LOOKUP = {
+    1: 'boolean',
+    2: 'integer',
+    3: 'string',
+    4: 'foreign_key',
+} as const;
+
+// Non-FK:  name(12) + type(1) + dataPageId(4) + pad(31) = 48
+// FK:      name(12) + type(1) + fkTable(12) + fkCol(12) + fkRefPageId(4) + dataPageId(4) + pad(3) = 48
+
+const COL_SLOT = {
+    NAME: 0,
+    TYPE: 12,
+    DATA_PAGE_ID: 13, // non-FK
+    FK_TABLE: 13, // FK
+    FK_COL: 25, // FK
+    FK_REF_PAGE_ID: 37, // FK
+    FK_DATA_PAGE_ID: 41, // FK
+} as const;
+
+const TABLE_SLOT = {
+    NAME: 0,
+    MASTER_NMAP_PAGE_ID: 12,
+    NEXT_ROW_ID: 16,
+    SLOT_MAP: 20,
+    COL_DEFS: 24,
+} as const;
 
 export type PageType = (typeof PAGE_TYPES)[keyof typeof PAGE_TYPES];
 
@@ -48,4 +78,8 @@ export {
     DATA_TYPES,
     TABLE_SLOT_SIZE,
     COLUMN_SLOT_SIZE,
+    DELETED_SLOT,
+    COL_SLOT,
+    TABLE_SLOT,
+    DATA_TYPE_LOOKUP,
 };

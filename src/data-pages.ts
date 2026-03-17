@@ -1,9 +1,6 @@
 import * as fs from 'fs';
 import { allocatePage, readPage } from './page';
-import {
-    PAGE_SIZE,
-    PAGE_TYPES,
-} from './constants';
+import { PAGE_SIZE, PAGE_TYPES } from './constants';
 import { StorageErrorCode, StorageError } from './errors';
 
 const createBitmapPage = (fd: number) => {
@@ -49,7 +46,13 @@ const createSlottedPage = (fd: number) => {
     page.page.writeUInt16LE(PAGE_SIZE, 12); // free space pointer (data grows from end of page)
     // ... byte 14 is reserved ...
 
-    const written = fs.writeSync(fd, page.page, 0, PAGE_SIZE, pageId * PAGE_SIZE);
+    const written = fs.writeSync(
+        fd,
+        page.page,
+        0,
+        PAGE_SIZE,
+        pageId * PAGE_SIZE,
+    );
     if (written !== PAGE_SIZE) {
         throw new StorageError(
             StorageErrorCode.SHORT_WRITE,
@@ -68,5 +71,7 @@ const createSlottedPage = (fd: number) => {
 
     return pageId;
 };
+
+// todo: implement slot map functionality
 
 export { createBitmapPage, createFixedPage, createSlottedPage };

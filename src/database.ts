@@ -9,7 +9,7 @@ import {
 } from './constants';
 import { allocatePage, readPage } from './page';
 import { StorageError, StorageErrorCode } from './errors';
-import { DatabaseContext, Table } from './types';
+import { Column, DatabaseContext, ResolvedColumn, Table } from './types';
 
 const initDatabase = (
     filePath: string,
@@ -92,10 +92,12 @@ const initDatabase = (
     }
 
     const tableCache = new Map<string, Table>();
+    const columnCache = new Map<string, Map<string, ResolvedColumn>>();
 
     return {
         fd,
         tableCache,
+        columnCache,
     };
 };
 
@@ -104,6 +106,7 @@ const closeDatabase = (db: DatabaseContext) => {
     fs.closeSync(db.fd);
 
     db.tableCache.clear();
+    db.columnCache.clear();
 };
 
 export { initDatabase, closeDatabase };

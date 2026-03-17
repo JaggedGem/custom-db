@@ -1,5 +1,11 @@
 export { initDatabase, closeDatabase } from './database';
-export { createTable, createColumn, isForeignKey } from './catalog';
+export {
+    createTable,
+    createColumn,
+    isForeignKey,
+    getTable,
+    getColumn,
+} from './catalog';
 export { allocatePage, loadPage, getLatestPage } from './page';
 export {
     createBitmapPage,
