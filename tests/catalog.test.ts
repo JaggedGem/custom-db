@@ -180,6 +180,41 @@ describe('catalog', () => {
         }
     });
 
+    it('createTable supports foreign keys to normal columns', () => {
+        const dbPath = createTempDbFile();
+
+        try {
+            const db = initDatabase(dbPath, true);
+
+            createTable(db, 'users', [{ name: 'id', type: 'integer' }]);
+            createTable(db, 'posts', [
+                { name: 'id', type: 'integer' },
+                {
+                    name: 'author',
+                    type: 'foreign_key',
+                    foreignKey: { table: 'users', column: 'id' },
+                },
+            ]);
+
+            const usersTable = getTable('users', db);
+            const postsTable = getTable('posts', db);
+
+            const usersId = getColumn('id', usersTable, db);
+            const postsAuthor = getColumn('author', postsTable, db);
+
+            expect(postsAuthor.type).toBe('foreign_key');
+            if (postsAuthor.type === 'foreign_key') {
+                expect(postsAuthor.foreignKey.refPageId).toBe(
+                    usersId.columnDataId,
+                );
+            }
+
+            closeDatabase(db);
+        } finally {
+            cleanupTempDbFile(dbPath);
+        }
+    });
+
     it('createTable and getTable validate bad inputs', () => {
         const dbPath = createTempDbFile();
 

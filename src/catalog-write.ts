@@ -26,7 +26,6 @@ import {
 import {
     Column,
     DatabaseContext,
-    ResolvedFKColumn,
     isForeignKey,
 } from './types';
 import { getColumn, getTable } from './catalog-read';
@@ -179,7 +178,12 @@ const createColumn = (
             column.foreignKey.column,
             referencedTable,
             db,
-        ) as ResolvedFKColumn;
+        );
+
+        const referencedPageId =
+            referencedColumn.type === 'foreign_key' ?
+                referencedColumn.foreignKey.refPageId
+            :   referencedColumn.columnDataId;
 
         colDefs.page.fill(
             0,
@@ -195,7 +199,7 @@ const createColumn = (
 
         // target primary key data page (offset 37 from slot start)
         colDefs.page.writeUInt32LE(
-            referencedColumn.foreignKey.refPageId,
+            referencedPageId,
             nextOffset + COL_SLOT.FK_REF_PAGE_ID,
         );
 
