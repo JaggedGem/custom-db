@@ -2,6 +2,7 @@ export enum StorageErrorCode {
     SHORT_WRITE = 'SHORT_WRITE',
     SHORT_READ = 'SHORT_READ',
     IO_ERROR = 'IO_ERROR',
+    OUT_OF_BOUNDS = 'OUT_OF_BOUNDS'
 }
 
 export class StorageError extends Error {
