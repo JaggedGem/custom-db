@@ -70,5 +70,6 @@ const setBit = (fd: number, pageId: number, bit: number, value: boolean) => {
             },
         );
     }
-
 };
+
+export { setBit };
