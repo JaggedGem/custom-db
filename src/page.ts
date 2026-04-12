@@ -162,7 +162,7 @@ const loadPage = (fd: number, pageId: number, caller: string) => {
 function getLatestPage(
     fd: number,
     startingPageId: number,
-    expectedType: PageType,
+    expectedType?: PageType,
 ) {
     let currentPageId = startingPageId;
 
@@ -171,7 +171,7 @@ function getLatestPage(
         // second verifyPageType call which would re-read the same page.
         const page = readPage(fd, currentPageId, 'getLatestPage');
 
-        if (page.pageType !== expectedType) {
+        if (expectedType !== undefined && page.pageType !== expectedType) {
             throw new StorageError(
                 StorageErrorCode.IO_ERROR,
                 'Pages in chain should have the same page types',
