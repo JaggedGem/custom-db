@@ -355,6 +355,11 @@ const createTable = (db: DatabaseContext, name: string, columns: Column[]) => {
         nextOffset + TABLE_SLOT.COL_DEFS,
     );
 
+    tableDefs.page.writeUInt16LE(
+        columns.length,
+        nextOffset + TABLE_SLOT.NUM_COLS,
+    );
+
     // initialise the column definitions page and add all columns
     columns.forEach((col: Column) => createColumn(db, columnDefsId, col));
 

@@ -56,6 +56,7 @@ export interface Table {
     colDefsPageId: number;
     catalogPageId: number;
     catalogSlotOffset: number;
+    numCols: number;
 }
 
 export interface DatabaseContext {

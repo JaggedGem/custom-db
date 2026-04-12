@@ -69,6 +69,8 @@ const getTable = (name: string, db: DatabaseContext): Table => {
                 offset + TABLE_SLOT.COL_DEFS,
             );
 
+            const numCols = page.readUInt16LE(offset + TABLE_SLOT.NUM_COLS);
+
             // update the cache
             db.tableCache.set(name, {
                 name,
@@ -78,6 +80,7 @@ const getTable = (name: string, db: DatabaseContext): Table => {
                 colDefsPageId,
                 catalogPageId: currentPageId,
                 catalogSlotOffset: offset,
+                numCols
             });
 
             return {
@@ -88,6 +91,7 @@ const getTable = (name: string, db: DatabaseContext): Table => {
                 colDefsPageId,
                 catalogPageId: currentPageId,
                 catalogSlotOffset: offset,
+                numCols
             };
         }
 

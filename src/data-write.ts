@@ -60,13 +60,15 @@ const insertRow = <T extends readonly Column[]>(
         currentPageId = page.nextPageId;
     }
 
-    if (Object.keys(colDefs).length !== Object.keys(data).length) {
+    const numCols = table.numCols;
+
+    if (numCols !== Object.keys(data).length) {
         throw new ValidationError(
             ValidationErrorCode.BAD_INPUT,
             'Number of columns to be inserted should match number of columns in the table', // todo: handle allowed nulls
             {
                 context: {
-                    expectedLength: Object.keys(colDefs).length,
+                    expectedLength: numCols,
                     actualLength: Object.keys(data).length,
                 },
             },

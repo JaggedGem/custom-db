@@ -66,6 +66,7 @@ const TABLE_SLOT = {
     NEXT_ROW_ID: 16,
     SLOT_MAP: 20,
     COL_DEFS: 24,
+    NUM_COLS: 28,
 } as const;
 
 const SLOT_MAP_SLOT = {
