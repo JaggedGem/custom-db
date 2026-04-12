@@ -5,7 +5,6 @@ import {
     ValidationError,
     ValidationErrorCode,
 } from './errors';
-import { readPage } from './page';
 import * as fs from 'fs';
 
 const setBit = (fd: number, pageId: number, bit: number, value: boolean) => {
@@ -21,26 +20,31 @@ const setBit = (fd: number, pageId: number, bit: number, value: boolean) => {
         );
     }
 
-    const { page } = readPage(fd, pageId, 'setBit');
-
-    const BITMAP_OFFSET = HEADER_SIZE;
-    const targetByte = BITMAP_OFFSET + Math.floor(bit / 8);
+    const targetByte = Math.floor(bit / 8);
     const targetBit = bit % 8;
+    const fileOffset = pageId * PAGE_SIZE + HEADER_SIZE + targetByte;
 
-    if (targetByte >= page.length) {
+    const byteBuffer = Buffer.alloc(1);
+    const read = fs.readSync(fd, byteBuffer, 0, 1, fileOffset); // read only the byte which contains the bit we need to change
+
+    if (read < 0) {
         throw new StorageError(
-            StorageErrorCode.OUT_OF_BOUNDS,
-            'Bitmap write out of bounds',
+            StorageErrorCode.SHORT_READ,
+            'Short read while reading bitmap byte for requested bit',
             {
                 context: {
+                    pageId,
+                    bit,
                     targetByte,
-                    pageSize: page.length,
+                    expectedBytes: 1,
+                    actualBytes: read,
+                    position: fileOffset,
                 },
             },
         );
     }
 
-    let byte = page[targetByte]!;
+    let byte = byteBuffer[0]!;
 
     if (value) {
         byte |= 1 << targetBit;
@@ -48,24 +52,23 @@ const setBit = (fd: number, pageId: number, bit: number, value: boolean) => {
         byte &= ~(1 << targetBit);
     }
 
-    page[targetByte] = byte;
+    byteBuffer[0] = byte;
 
-    const written = fs.writeSync(fd, page, 0, PAGE_SIZE, pageId * PAGE_SIZE);
+    const written = fs.writeSync(fd, byteBuffer, 0, 1, fileOffset);
 
-    if (written !== PAGE_SIZE) {
+    if (written !== 1) {
         throw new StorageError(
             StorageErrorCode.SHORT_WRITE,
-            'Short Write while writing bitmap page',
+            'Short Write while writing bitmap byte',
             {
                 context: {
                     pageId,
-                    expectedBytes: PAGE_SIZE,
+                    expectedBytes: 1,
                     actualBytes: written,
-                    position: pageId * PAGE_SIZE,
+                    position: fileOffset,
                 },
             },
         );
     }
 
-    fs.fsyncSync(fd);
 };
