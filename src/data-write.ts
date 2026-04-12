@@ -24,6 +24,7 @@ import { setBit } from './utils';
 import { createBitmapPage, createSlottedPage } from './data-pages';
 import { writeSlotMapEntry } from './slot-map';
 import { persistNextRowId } from './catalog-write';
+import { writeNullBit } from './null-map';
 
 const insertRow = <T extends readonly Column[]>(
     tableName: string,
@@ -33,6 +34,9 @@ const insertRow = <T extends readonly Column[]>(
     const table = getTable(tableName, db);
 
     const colDefs: Record<string, ResolvedColumn> = {};
+
+    const colIndexes: Record<string, number> = {};
+    let i = 0;
 
     let currentPageId = table.colDefsPageId;
 
@@ -55,6 +59,10 @@ const insertRow = <T extends readonly Column[]>(
             const name = page.page.toString('utf8', nameStart, endOffset);
 
             colDefs[name] = getColumn(name, table, db);
+
+            colIndexes[name] = i;
+
+            i++;
         }
 
         currentPageId = page.nextPageId;
@@ -77,9 +85,7 @@ const insertRow = <T extends readonly Column[]>(
 
     const slotIndex = table.nextRowId;
 
-    for (const colName in data) {
-        const value = data[colName];
-
+    for (const [ colName, value ] of Object.entries(data)) {
         const currentCol = colDefs[colName];
 
         if (!currentCol) {
@@ -536,19 +542,30 @@ const insertRow = <T extends readonly Column[]>(
                 break;
             }
         }
+
+        // write the nullmap to show that the newly
+        // introduced value is not null
+        const colIndex = colIndexes[colName];
+        if (colIndex === undefined) {
+            throw new ValidationError(
+                ValidationErrorCode.BAD_INPUT,
+                'Column index not found for column: ' + colName,
+            );
+        }
+
+        writeNullBit(db.fd, table.masterNMapPageId, table.nextRowId, colIndex, numCols, false);
     }
 
     fs.fsyncSync(db.fd);
 
     writeSlotMapEntry(db.fd, table.slotMapId, table.nextRowId, slotIndex);
-    // todo: handle null map
 
     // update next row id in the table definition and the cache
     table.nextRowId += 1;
     persistNextRowId(db, table);
     db.tableCache.set(tableName, table);
 
-    return table.nextRowId;
+    return slotIndex;
 };
 
 export { insertRow };

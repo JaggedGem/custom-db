@@ -73,8 +73,6 @@ const writeNullBit = (
 
     // finally update the value of the bit
     setBit(fd, currentNMapPageId, bitPosition, isNull);
-
-    fs.fsyncSync(fd);
 };
 
 export { writeNullBit };
