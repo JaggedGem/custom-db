@@ -9,6 +9,7 @@ import {
     SLOT_MAP_SLOT_SIZE,
     SLOT_MAP_SLOT,
     DELETED_SLOT,
+    HEADER_SIZE,
 } from './constants';
 import {
     StorageErrorCode,
@@ -68,7 +69,7 @@ const writeSlotMapEntry = (
 
         slotMap = readPage(fd, pageId, 'writeSlotMapEntry');
 
-        nextOffset = 16;
+        nextOffset = HEADER_SIZE;
         nrEntries = 0;
     }
 
@@ -120,7 +121,7 @@ const readSlotMapEntry = (
     rowId: number,
 ) => {
     let parsedPage = readPage(fd, startingPageId, 'readSlotMapEntry');
-    let offset = 16;
+    let offset = HEADER_SIZE;
     let page = parsedPage.page;
     let nextPageId = parsedPage.nextPageId;
     let entryCount = parsedPage.recordCount;
@@ -161,7 +162,7 @@ const readSlotMapEntry = (
 
         // go to the next page
         parsedPage = readPage(fd, nextPageId, 'readSlotMapEntry');
-        offset = 16;
+        offset = HEADER_SIZE;
         page = parsedPage.page;
         nextPageId = parsedPage.nextPageId;
         entryCount = parsedPage.recordCount;
@@ -175,7 +176,7 @@ const deleteSlotMapEntry = (
 ) => {
     let pageId = startingPageId;
     let parsedPage = readPage(fd, startingPageId, 'deleteSlotMapEntry');
-    let offset = 16;
+    let offset = HEADER_SIZE;
     let page = parsedPage.page;
     let nextPageId = parsedPage.nextPageId;
     let entryCount = parsedPage.recordCount;
@@ -230,7 +231,7 @@ const deleteSlotMapEntry = (
         // go to the next page
         pageId = nextPageId;
         parsedPage = readPage(fd, nextPageId, 'deleteSlotMapEntry');
-        offset = 16;
+        offset = HEADER_SIZE;
         page = parsedPage.page;
         nextPageId = parsedPage.nextPageId;
         entryCount = parsedPage.recordCount;

@@ -4,6 +4,7 @@ import {
     COL_SLOT,
     COLUMN_SLOT_SIZE,
     DATA_TYPES,
+    HEADER_SIZE,
     PAGE_TYPES,
     TABLE_SLOT_SIZE,
 } from '../src/constants';
@@ -54,8 +55,8 @@ describe('catalog', () => {
 
             const colPage = readPage(fd, colDefsPageId, 'catalog.test');
             expect(colPage.recordCount).toBe(1);
-            expect(colPage.nextOffset).toBe(16 + COLUMN_SLOT_SIZE);
-            const slotOffset = 16;
+            expect(colPage.nextOffset).toBe(HEADER_SIZE + COLUMN_SLOT_SIZE);
+            const slotOffset = HEADER_SIZE;
             expect(colPage.page.readUInt8(slotOffset + COL_SLOT.TYPE)).toBe(
                 DATA_TYPES.INTEGER,
             );
@@ -126,7 +127,9 @@ describe('catalog', () => {
 
             const tableCatalogPage = readPage(db.fd, 1, 'catalog.test');
             expect(tableCatalogPage.recordCount).toBe(1);
-            expect(tableCatalogPage.nextOffset).toBe(16 + TABLE_SLOT_SIZE);
+            expect(tableCatalogPage.nextOffset).toBe(
+                HEADER_SIZE + TABLE_SLOT_SIZE,
+            );
 
             const table = getTable('users', db);
             expect(table.name).toBe('users');

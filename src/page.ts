@@ -6,6 +6,7 @@ import {
     RECORD_COUNT_POSITION,
     PAGE_TYPE_POSITION,
     PAGE_TYPES,
+    HEADER_SIZE,
     PageType,
 } from './constants';
 import {
@@ -14,6 +15,7 @@ import {
     ValidationErrorCode,
     ValidationError,
 } from './errors';
+import { pageType } from './types';
 
 const writeHeader = (
     fd: number,
@@ -25,7 +27,7 @@ const writeHeader = (
 
     // Header Structure
     buf.writeUInt32LE(0, NEXT_PAGE_ID_POSITION); // next page id (0 = end of chain)
-    buf.writeUInt16LE(16, NEXT_SLOT_OFFSET_POSITION); // next offset (start after 16-byte header)
+    buf.writeUInt16LE(HEADER_SIZE, NEXT_SLOT_OFFSET_POSITION); // next offset (start after header)
     buf.writeUInt16LE(0, RECORD_COUNT_POSITION); // record count (0)
     // ... bytes 8-14 are padding ...
     buf.writeUInt8(pageType, PAGE_TYPE_POSITION); // page type identifier (refer to PAGE_TYPES)
@@ -52,7 +54,7 @@ const writeHeader = (
     return buf;
 };
 
-const readPage = (fd: number, pageId: number, caller: string) => {
+const readPage = (fd: number, pageId: number, caller: string): pageType => {
     const buf = Buffer.alloc(PAGE_SIZE);
     const bytes = fs.readSync(fd, buf, 0, PAGE_SIZE, pageId * PAGE_SIZE);
     if (bytes !== PAGE_SIZE) {

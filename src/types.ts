@@ -16,6 +16,18 @@ export interface NormalColumn extends BaseColumn {
 
 export type Column = ForeignKeyColumn | NormalColumn;
 
+type ColumnValue<T extends Column> =
+    T extends ForeignKeyColumn ?
+        number // usually FK = id
+    : T extends { type: 'boolean' } ? boolean
+    : T extends { type: 'integer' } ? number
+    : T extends { type: 'string' } ? string
+    : never;
+
+export type RowObject<T extends readonly Column[]> = {
+    [K in T[number] as K['name']]: ColumnValue<K>;
+};
+
 interface BaseResolvedColumn {
     name: string;
     columnDataId: number;
@@ -52,3 +64,11 @@ export interface DatabaseContext {
 
 export const isForeignKey = (col: Column): col is ForeignKeyColumn =>
     col.type === 'foreign_key';
+
+export interface pageType {
+    nextPageId: number;
+    nextOffset: number;
+    recordCount: number;
+    pageType: number;
+    page: Buffer;
+}

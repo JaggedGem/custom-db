@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
 import {
+    HEADER_SIZE,
     PAGE_SIZE,
     PAGE_TYPES,
     NEXT_PAGE_ID_POSITION,
@@ -38,9 +39,13 @@ describe('slot-map', () => {
 
             const page = readPage(fd, slotMapPageId, 'slot-map.test');
             expect(page.recordCount).toBe(1);
-            expect(page.nextOffset).toBe(16 + SLOT_MAP_SLOT_SIZE);
-            expect(page.page.readUInt32LE(16 + SLOT_MAP_SLOT.ROW_ID)).toBe(42);
-            expect(page.page.readUInt32LE(16 + SLOT_MAP_SLOT.SLOT_INDEX)).toBe(7);
+            expect(page.nextOffset).toBe(HEADER_SIZE + SLOT_MAP_SLOT_SIZE);
+            expect(
+                page.page.readUInt32LE(HEADER_SIZE + SLOT_MAP_SLOT.ROW_ID),
+            ).toBe(42);
+            expect(
+                page.page.readUInt32LE(HEADER_SIZE + SLOT_MAP_SLOT.SLOT_INDEX),
+            ).toBe(7);
 
             closeDatabase(db);
         } finally {
@@ -72,18 +77,26 @@ describe('slot-map', () => {
             writeSlotMapEntry(fd, slotMapPageId, 99, 123);
 
             const firstPage = readPage(fd, slotMapPageId, 'slot-map.test');
-            const nextPageId = firstPage.page.readUInt32LE(NEXT_PAGE_ID_POSITION);
+            const nextPageId = firstPage.page.readUInt32LE(
+                NEXT_PAGE_ID_POSITION,
+            );
             expect(nextPageId).not.toBe(0);
 
             const secondPage = readPage(fd, nextPageId, 'slot-map.test');
             expect(secondPage.pageType).toBe(PAGE_TYPES.SLOT_MAP);
             expect(secondPage.recordCount).toBe(1);
-            expect(secondPage.nextOffset).toBe(16 + SLOT_MAP_SLOT_SIZE);
-            expect(secondPage.page.readUInt32LE(16 + SLOT_MAP_SLOT.ROW_ID)).toBe(
-                99,
+            expect(secondPage.nextOffset).toBe(
+                HEADER_SIZE + SLOT_MAP_SLOT_SIZE,
             );
             expect(
-                secondPage.page.readUInt32LE(16 + SLOT_MAP_SLOT.SLOT_INDEX),
+                secondPage.page.readUInt32LE(
+                    HEADER_SIZE + SLOT_MAP_SLOT.ROW_ID,
+                ),
+            ).toBe(99);
+            expect(
+                secondPage.page.readUInt32LE(
+                    HEADER_SIZE + SLOT_MAP_SLOT.SLOT_INDEX,
+                ),
             ).toBe(123);
 
             closeDatabase(db);
@@ -156,9 +169,9 @@ describe('slot-map', () => {
             deleteSlotMapEntry(fd, slotMapPageId, 7);
 
             const page = readPage(fd, slotMapPageId, 'slot-map.test');
-            expect(page.page.readUInt32LE(16 + SLOT_MAP_SLOT.SLOT_INDEX)).toBe(
-                DELETED_SLOT,
-            );
+            expect(
+                page.page.readUInt32LE(HEADER_SIZE + SLOT_MAP_SLOT.SLOT_INDEX),
+            ).toBe(DELETED_SLOT);
             expect(() => readSlotMapEntry(fd, slotMapPageId, 7)).toThrow(
                 ValidationError,
             );

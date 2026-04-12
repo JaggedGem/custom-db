@@ -11,6 +11,7 @@ import {
     COLUMN_SLOT_SIZE,
     COL_SLOT,
     TABLE_SLOT,
+    HEADER_SIZE,
 } from './constants';
 import {
     StorageErrorCode,
@@ -23,11 +24,7 @@ import {
     createFixedPage,
     createSlottedPage,
 } from './data-pages';
-import {
-    Column,
-    DatabaseContext,
-    isForeignKey,
-} from './types';
+import { Column, DatabaseContext, isForeignKey } from './types';
 import { getColumn, getTable } from './catalog-read';
 
 // todo: implement existing column checking
@@ -96,7 +93,7 @@ const createColumn = (
 
         colDefs = readPage(fd, pageId, 'createColumn');
 
-        nextOffset = 16;
+        nextOffset = HEADER_SIZE;
         nrColumns = 0;
     }
 
@@ -312,7 +309,7 @@ const createTable = (db: DatabaseContext, name: string, columns: Column[]) => {
 
         pageId = newPageId;
 
-        nextOffset = 16;
+        nextOffset = HEADER_SIZE;
         nrTables = 0;
     }
 

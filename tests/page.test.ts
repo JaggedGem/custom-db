@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-import { PAGE_SIZE, PAGE_TYPES } from '../src/constants';
+import { HEADER_SIZE, PAGE_SIZE, PAGE_TYPES } from '../src/constants';
 import { initDatabase, closeDatabase } from '../src/database';
 import {
     allocatePage,
@@ -30,7 +30,7 @@ describe('page', () => {
                 'page.test',
             );
             expect(page.readUInt32LE(0)).toBe(0);
-            expect(page.readUInt16LE(4)).toBe(16);
+            expect(page.readUInt16LE(4)).toBe(HEADER_SIZE);
             expect(page.readUInt16LE(6)).toBe(0);
             expect(page.readUInt8(15)).toBe(PAGE_TYPES.DATA_BITMAP);
 

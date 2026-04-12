@@ -1,7 +1,15 @@
-import { COL_SLOT, COLUMN_SLOT_SIZE, DATA_TYPE_LOOKUP, DATA_TYPES, TABLE_SLOT, TABLE_SLOT_SIZE } from "./constants";
-import { ValidationError, ValidationErrorCode } from "./errors";
-import { readPage } from "./page";
-import { Column, DatabaseContext, ResolvedColumn, Table } from "./types";
+import {
+    COL_SLOT,
+    COLUMN_SLOT_SIZE,
+    DATA_TYPE_LOOKUP,
+    DATA_TYPES,
+    HEADER_SIZE,
+    TABLE_SLOT,
+    TABLE_SLOT_SIZE,
+} from './constants';
+import { ValidationError, ValidationErrorCode } from './errors';
+import { readPage } from './page';
+import { Column, DatabaseContext, ResolvedColumn, Table } from './types';
 
 const getTable = (name: string, db: DatabaseContext): Table => {
     const cachedTable = db.tableCache.get(name);
@@ -21,7 +29,7 @@ const getTable = (name: string, db: DatabaseContext): Table => {
 
     const fd = db.fd;
     let parsedPage = readPage(fd, 1, 'getTable');
-    let offset = 16;
+    let offset = HEADER_SIZE;
     let page = parsedPage.page;
     let nextPageId = parsedPage.nextPageId;
     let tableCount = parsedPage.recordCount;
@@ -89,7 +97,7 @@ const getTable = (name: string, db: DatabaseContext): Table => {
 
         // go to the next page
         parsedPage = readPage(fd, nextPageId, 'getTable');
-        offset = 16;
+        offset = HEADER_SIZE;
         page = parsedPage.page;
         nextPageId = parsedPage.nextPageId;
         tableCount = parsedPage.recordCount;
@@ -118,7 +126,7 @@ const getColumn = (
 
     const fd = db.fd;
     let parsedPage = readPage(fd, table.colDefsPageId, 'getColumn');
-    let offset = 16;
+    let offset = HEADER_SIZE;
     let page = parsedPage.page;
     let nextPageId = parsedPage.nextPageId;
     let columnCount = parsedPage.recordCount;
@@ -266,11 +274,11 @@ const getColumn = (
 
         // go to the next page
         parsedPage = readPage(fd, nextPageId, 'getColumn');
-        offset = 16;
+        offset = HEADER_SIZE;
         page = parsedPage.page;
         nextPageId = parsedPage.nextPageId;
         columnCount = parsedPage.recordCount;
     }
 };
 
-export { getTable, getColumn }
+export { getTable, getColumn };

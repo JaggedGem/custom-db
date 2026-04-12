@@ -17,6 +17,7 @@ const PAGE_TYPE_POSITION = 15;
 const TABLE_SLOT_SIZE = 64;
 const COLUMN_SLOT_SIZE = 48;
 const SLOT_MAP_SLOT_SIZE = 8;
+const HEADER_SIZE = 16;
 
 const PAGE_TYPES = {
     MASTER_NULL_MAP: 1,
@@ -90,4 +91,5 @@ export {
     DATA_TYPE_LOOKUP,
     SLOT_MAP_SLOT_SIZE,
     SLOT_MAP_SLOT,
+    HEADER_SIZE,
 };
