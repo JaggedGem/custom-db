@@ -20,7 +20,7 @@ import {
 import { allocatePage, getLatestPage, readPage } from './page';
 import { Column, DatabaseContext, ResolvedColumn, RowObject } from './types';
 import * as fs from 'fs';
-import { setBit } from './utilities';
+import { setBit } from './utils';
 import { createBitmapPage, createSlottedPage } from './data-pages';
 import { writeSlotMapEntry } from './slot-map';
 import { persistNextRowId } from './catalog-write';
