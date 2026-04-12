@@ -10,9 +10,19 @@ export interface ForeignKeyColumn extends BaseColumn {
     };
 }
 
-export interface NormalColumn extends BaseColumn {
-    type: 'boolean' | 'integer' | 'string';
+export interface BooleanColumn extends BaseColumn {
+    type: 'boolean';
 }
+
+export interface IntegerColumn extends BaseColumn {
+    type: 'integer';
+}
+
+export interface StringColumn extends BaseColumn {
+    type: 'string';
+}
+
+export type NormalColumn = BooleanColumn | IntegerColumn | StringColumn;
 
 export type Column = ForeignKeyColumn | NormalColumn;
 
