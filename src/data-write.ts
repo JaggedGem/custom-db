@@ -8,6 +8,7 @@ import {
     NEXT_SLOT_OFFSET_POSITION,
     PAGE_SIZE,
     PAGE_TYPES,
+    RECORD_COUNT_POSITION,
     SLOT_DESCRIPTOR_SIZE,
 } from './constants';
 import {
@@ -22,6 +23,7 @@ import * as fs from 'fs';
 import { setBit } from './utilities';
 import { createBitmapPage, createSlottedPage } from './data-pages';
 import { writeSlotMapEntry } from './slot-map';
+import { persistNextRowId } from './catalog-write';
 
 const insertRow = <T extends readonly Column[]>(
     tableName: string,
@@ -123,7 +125,7 @@ const insertRow = <T extends readonly Column[]>(
         let page = readPage(db.fd, targetPageId, 'insertRow');
 
         switch (currentCol.type) {
-            case 'string':
+            case 'string': {
                 // type narrow to string
                 if (typeof value !== 'string') {
                     throw new ValidationError(
@@ -148,7 +150,7 @@ const insertRow = <T extends readonly Column[]>(
                 // handle page overflow
                 if (
                     dataFreeSpace - valueByteLength <
-                    HEADER_SIZE + (slotIndex + 1) * 4
+                    HEADER_SIZE + (page.recordCount + 1) * SLOT_DESCRIPTOR_SIZE
                 ) {
                     const newPageId = createSlottedPage(db.fd);
 
@@ -200,11 +202,11 @@ const insertRow = <T extends readonly Column[]>(
                 const dataOffset = dataFreeSpace - valueByteLength;
                 page.page.writeUInt16LE(
                     dataOffset,
-                    HEADER_SIZE + slotIndex * SLOT_DESCRIPTOR_SIZE,
+                    HEADER_SIZE + page.recordCount * SLOT_DESCRIPTOR_SIZE,
                 ); // write the start of the data
                 page.page.writeUInt16LE(
                     valueByteLength,
-                    HEADER_SIZE + slotIndex * SLOT_DESCRIPTOR_SIZE + 2,
+                    HEADER_SIZE + page.recordCount * SLOT_DESCRIPTOR_SIZE + 2,
                 ); // write the length of the data
 
                 // update the data free space pointer
@@ -213,8 +215,14 @@ const insertRow = <T extends readonly Column[]>(
                     FREE_SPACE_POINTER_POSITION,
                 );
 
+                // update record count
+                page.page.writeUInt16LE(
+                    page.recordCount + 1,
+                    RECORD_COUNT_POSITION,
+                );
+
                 // write to disk
-                let written = fs.writeSync(
+                const written = fs.writeSync(
                     db.fd,
                     page.page,
                     0,
@@ -238,8 +246,9 @@ const insertRow = <T extends readonly Column[]>(
                 }
 
                 break;
+            }
 
-            case 'integer':
+            case 'integer': {
                 // type narrow to number
                 if (typeof value !== 'number') {
                     throw new ValidationError(
@@ -305,8 +314,14 @@ const insertRow = <T extends readonly Column[]>(
                     NEXT_SLOT_OFFSET_POSITION,
                 );
 
+                // update record count
+                page.page.writeUInt16LE(
+                    page.recordCount + 1,
+                    RECORD_COUNT_POSITION,
+                );
+
                 // write to disk
-                written = fs.writeSync(
+                const written = fs.writeSync(
                     db.fd,
                     page.page,
                     0,
@@ -330,8 +345,9 @@ const insertRow = <T extends readonly Column[]>(
                 }
 
                 break;
+            }
 
-            case 'boolean':
+            case 'boolean': {
                 // type narrow to boolean
                 if (typeof value !== 'boolean') {
                     throw new ValidationError(
@@ -382,11 +398,44 @@ const insertRow = <T extends readonly Column[]>(
                     page = readPage(db.fd, targetPageId, 'insertRow');
                 }
 
-                setBit(db.fd, targetPageId, slotIndex, value);
+                setBit(db.fd, targetPageId, page.recordCount, value);
+
+                page = readPage(db.fd, targetPageId, 'insertRow');
+
+                // update record count
+                page.page.writeUInt16LE(
+                    page.recordCount + 1,
+                    RECORD_COUNT_POSITION,
+                );
+
+                // write to disk
+                const written = fs.writeSync(
+                    db.fd,
+                    page.page,
+                    0,
+                    PAGE_SIZE,
+                    targetPageId * PAGE_SIZE,
+                );
+
+                if (written !== PAGE_SIZE) {
+                    throw new StorageError(
+                        StorageErrorCode.SHORT_WRITE,
+                        'Short Write while writing data to page',
+                        {
+                            context: {
+                                pageId: targetPageId,
+                                expectedBytes: PAGE_SIZE,
+                                actualBytes: written,
+                                position: targetPageId * PAGE_SIZE,
+                            },
+                        },
+                    );
+                }
 
                 break;
+            }
 
-            case 'foreign_key':
+            case 'foreign_key': {
                 // type narrow to number
                 if (typeof value !== 'number') {
                     throw new ValidationError(
@@ -452,8 +501,14 @@ const insertRow = <T extends readonly Column[]>(
                     NEXT_SLOT_OFFSET_POSITION,
                 );
 
+                // update record count
+                page.page.writeUInt16LE(
+                    page.recordCount + 1,
+                    RECORD_COUNT_POSITION,
+                );
+
                 // write to disk
-                written = fs.writeSync(
+                const written = fs.writeSync(
                     db.fd,
                     page.page,
                     0,
@@ -464,7 +519,7 @@ const insertRow = <T extends readonly Column[]>(
                 if (written !== PAGE_SIZE) {
                     throw new StorageError(
                         StorageErrorCode.SHORT_WRITE,
-                        'Short Write while writing page header',
+                        'Short Write while writing data to page',
                         {
                             context: {
                                 pageId: targetPageId,
@@ -477,15 +532,19 @@ const insertRow = <T extends readonly Column[]>(
                 }
 
                 break;
+            }
         }
-
-        fs.fsyncSync(db.fd);
     }
+
+    fs.fsyncSync(db.fd);
 
     writeSlotMapEntry(db.fd, table.slotMapId, table.nextRowId, slotIndex);
     // todo: handle null map
 
-    // todo: increase rowId
+    // update next row id in the table definition and the cache
+    table.nextRowId += 1;
+    persistNextRowId(db, table);
+    db.tableCache.set(tableName, table);
 
     return table.nextRowId;
 };

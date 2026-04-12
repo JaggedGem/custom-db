@@ -28,7 +28,8 @@ const getTable = (name: string, db: DatabaseContext): Table => {
     }
 
     const fd = db.fd;
-    let parsedPage = readPage(fd, 1, 'getTable');
+    let currentPageId = 1;
+    let parsedPage = readPage(fd, currentPageId, 'getTable');
     let offset = HEADER_SIZE;
     let page = parsedPage.page;
     let nextPageId = parsedPage.nextPageId;
@@ -75,6 +76,8 @@ const getTable = (name: string, db: DatabaseContext): Table => {
                 nextRowId,
                 slotMapId,
                 colDefsPageId,
+                catalogPageId: currentPageId,
+                catalogSlotOffset: offset,
             });
 
             return {
@@ -83,6 +86,8 @@ const getTable = (name: string, db: DatabaseContext): Table => {
                 nextRowId,
                 slotMapId,
                 colDefsPageId,
+                catalogPageId: currentPageId,
+                catalogSlotOffset: offset,
             };
         }
 
@@ -99,6 +104,7 @@ const getTable = (name: string, db: DatabaseContext): Table => {
         parsedPage = readPage(fd, nextPageId, 'getTable');
         offset = HEADER_SIZE;
         page = parsedPage.page;
+        currentPageId = nextPageId;
         nextPageId = parsedPage.nextPageId;
         tableCount = parsedPage.recordCount;
     }

@@ -24,7 +24,7 @@ import {
     createFixedPage,
     createSlottedPage,
 } from './data-pages';
-import { Column, DatabaseContext, isForeignKey } from './types';
+import { Column, DatabaseContext, isForeignKey, Table } from './types';
 import { getColumn, getTable } from './catalog-read';
 
 // todo: implement existing column checking
@@ -393,4 +393,40 @@ const createTable = (db: DatabaseContext, name: string, columns: Column[]) => {
     fs.fsyncSync(fd);
 };
 
-export { createColumn, createTable };
+const persistNextRowId = (db: DatabaseContext, table: Table) => {
+    const page = readPage(db.fd, table.catalogPageId, 'persistNextRowId');
+
+    page.page.writeUInt32LE(
+        table.nextRowId,
+        table.catalogSlotOffset + TABLE_SLOT.NEXT_ROW_ID,
+    );
+
+    const written = fs.writeSync(
+        db.fd,
+        page.page,
+        0,
+        PAGE_SIZE,
+        table.catalogPageId * PAGE_SIZE,
+    );
+
+    if (written !== PAGE_SIZE) {
+        throw new StorageError(
+            StorageErrorCode.SHORT_WRITE,
+            'Short Write while updating next row id in the ' +
+                table.name +
+                ' table',
+            {
+                context: {
+                    pageId: table.catalogPageId,
+                    expectedBytes: PAGE_SIZE,
+                    actualBytes: written,
+                    position: table.catalogPageId * PAGE_SIZE,
+                },
+            },
+        );
+    }
+
+    fs.fsyncSync(db.fd);
+};
+
+export { createColumn, createTable, persistNextRowId };
