@@ -13,11 +13,15 @@ const NEXT_SLOT_OFFSET_POSITION = 4;
 const RECORD_COUNT_POSITION = 6;
 const PAGE_TYPE_POSITION = 15;
 
+// slotted page specific headers
+const FREE_SPACE_POINTER_POSITION = 12;
+
 // slot sizes
 const TABLE_SLOT_SIZE = 64;
 const COLUMN_SLOT_SIZE = 48;
 const SLOT_MAP_SLOT_SIZE = 8;
 const HEADER_SIZE = 16;
+const SLOT_DESCRIPTOR_SIZE = 4;
 
 const PAGE_TYPES = {
     MASTER_NULL_MAP: 1,
@@ -92,4 +96,6 @@ export {
     SLOT_MAP_SLOT_SIZE,
     SLOT_MAP_SLOT,
     HEADER_SIZE,
+    FREE_SPACE_POINTER_POSITION,
+    SLOT_DESCRIPTOR_SIZE,
 };

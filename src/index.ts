@@ -16,3 +16,4 @@ export { isForeignKey } from './types';
 export { PAGE_SIZE, PAGE_TYPES, DATA_TYPES, type PageType } from './constants';
 export { StorageError, ValidationError } from './errors';
 export type { Column } from './types';
+export { insertRow } from './data-write';
