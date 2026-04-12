@@ -70,6 +70,7 @@ const insertRow = <T extends readonly Column[]>(
 
     const numCols = table.numCols;
 
+    // todo: handle null-allowed columns
     if (numCols !== Object.keys(data).length) {
         throw new ValidationError(
             ValidationErrorCode.BAD_INPUT,
@@ -85,7 +86,7 @@ const insertRow = <T extends readonly Column[]>(
 
     const slotIndex = table.nextRowId;
 
-    for (const [ colName, value ] of Object.entries(data)) {
+    for (const [colName, value] of Object.entries(data)) {
         const currentCol = colDefs[colName];
 
         if (!currentCol) {
@@ -553,7 +554,14 @@ const insertRow = <T extends readonly Column[]>(
             );
         }
 
-        writeNullBit(db.fd, table.masterNMapPageId, table.nextRowId, colIndex, numCols, false);
+        writeNullBit(
+            db.fd,
+            table.masterNMapPageId,
+            table.nextRowId,
+            colIndex,
+            numCols,
+            false,
+        );
     }
 
     fs.fsyncSync(db.fd);
